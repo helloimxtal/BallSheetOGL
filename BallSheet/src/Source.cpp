@@ -423,6 +423,7 @@ int main()
             if (show_main_settings)
             {
                 float oldZoom = zoom;
+                float oldts = targetSize.x;
 
                 ImGui::Begin("Settings");
 
@@ -553,7 +554,7 @@ int main()
 
                 cursorSize.y = cursorSize.x;
                 targetSize.y = targetSize.x;
-                if (oldZoom != zoom)
+                if (oldZoom != zoom || oldts != targetSize.x)
                 {
                     updateRNG(distrib_x, distrib_y, SCR_WIDTH, SCR_HEIGHT, zoom, targetSize.y, targetSize.x);
                     targetPos.x = ((targetPos.x - (((SCR_WIDTH / oldZoom - 800.0) / 2.0) + 800.0 / 6.0))) + (((SCR_WIDTH / zoom - 800.0) / 2.0) + 800.0 / 6.0);
