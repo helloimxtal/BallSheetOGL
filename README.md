@@ -3,7 +3,7 @@ C++ OpenGL remake of https://github.com/dphdmn/ballsheet/
 
 ## Installation
 
-Download `BallSheetOGL.7z` from the Releases tab, extract it, run `BallSheet.exe`
+Download `BallSheetOGL.7z` from the Releases tab, extract it, run `BallSheet.exe` (do not move BallSheet.exe out of the folder)
 
 ## Miscellany
 - I made this because I think disabling V-Sync in chromium browsers is annoying (also because I'm bored and not beating Axia)
