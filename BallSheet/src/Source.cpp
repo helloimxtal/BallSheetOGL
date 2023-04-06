@@ -40,6 +40,7 @@ bool valueInCircle(float x1, float y1, float x2, float y2, float R);
 // Miscellany
 void updateRNG(std::uniform_int_distribution<>& xdist, std::uniform_int_distribution<>& ydist, int width, int height, float zoom, float tsy, float tsx);
 void restartGame(GLFWwindow* window);
+void resetStats(GLFWwindow* window);
 
 // ImGui
 namespace ImGui 
@@ -571,7 +572,7 @@ int main()
             if (ImPlot::BeginPlot("Results"))
             {
                 ImPlot::SetupAxes("Elapsed Time", "Reaction Time");
-                ImPlot::PlotLine("Graph", &eatTimes[0], &reactionTimes[0], reactionTimes.size());
+                ImPlot::PlotLine("Graph", &eatTimes.at(0), &reactionTimes.at(0), reactionTimes.size());
                 ImPlot::EndPlot();
                 ImGui::Text("Time:         %f", elapsedTime);
                 ImGui::Text("Avg. Balls/s: %f", averageBalls);
@@ -613,21 +614,15 @@ int main()
 
 void restartGame(GLFWwindow* window)
 {
+    if (reactionTimes.size() == 0)
+    {
+        resetStats(window);
+    }
     if (gameState != INGAME)
     {
         if (gameState == POSTGAME)
         {
-            if (!show_settings_windows)
-                glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
-            reactionTimes.clear();
-            eatTimes.clear();
-            startingTime = 0.0;
-            score = 0.0;
-            maxEat = 0.0;
-            trueMaxEat = 0.0;
-            hp = startingHp;
-            targetPos = glm::vec3(SCR_WIDTH / (2 * zoom), SCR_HEIGHT / (2 * zoom), 0.0f);
-            gameState = PREGAME;
+            resetStats(window);
         }
         return;
     }
@@ -645,13 +640,13 @@ void restartGame(GLFWwindow* window)
     }
 
     // Max eat
-    for (int i = 0; eatTimes[i] <= eatTimes.back() - MAX_EPS_RANGE; i++)
+    for (int i = 0; eatTimes.at(i) <= eatTimes.back() - MAX_EPS_RANGE; i++) // a
     {
         double temp = 0;
         double unweightedtemp = 0;
-        for (int j = i; eatTimes[j] <= eatTimes[i] + MAX_EPS_RANGE; j++)
+        for (int j = i; eatTimes.at(j) <= eatTimes.at(i) + MAX_EPS_RANGE; j++)
         {
-            temp += scorePerBall * ((std::min)(reactionTimes[j], cheeseThreshold) / cheeseThreshold);
+            temp += scorePerBall * ((std::min)(reactionTimes.at(j), cheeseThreshold) / cheeseThreshold);
             unweightedtemp += scorePerBall;
         }
         double candidateMaxEat = temp / MAX_EPS_RANGE;
@@ -680,6 +675,21 @@ void restartGame(GLFWwindow* window)
 
     gameState = POSTGAME;
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL); 
+}
+
+void resetStats(GLFWwindow* window)
+{
+    if (!show_settings_windows)
+        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
+    reactionTimes.clear();
+    eatTimes.clear();
+    startingTime = 0.0;
+    score = 0.0;
+    maxEat = 0.0;
+    trueMaxEat = 0.0;
+    hp = startingHp;
+    targetPos = glm::vec3(SCR_WIDTH / (2 * zoom), SCR_HEIGHT / (2 * zoom), 0.0f);
+    gameState = PREGAME;
 }
 
 bool valueInCircle(float x1, float y1, float x2, float y2, float R)
