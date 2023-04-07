@@ -574,8 +574,8 @@ int main()
                 if (oldZoom != zoom || oldts != targetSize.x)
                 {
                     updateRNG(distrib_x, distrib_y, SCR_WIDTH, SCR_HEIGHT, zoom, targetSize.y, targetSize.x);
-                    targetPos.x = ((targetPos.x - (((SCR_WIDTH / oldZoom - 800.0) / 2.0) + 800.0 / 6.0))) + (((SCR_WIDTH / zoom - 800.0) / 2.0) + 800.0 / 6.0);
-                    targetPos.y = ((targetPos.y - (((SCR_HEIGHT / oldZoom - 800.0) / 2.0) + 800.0 / 6.0))) + (((SCR_HEIGHT / zoom - 800.0) / 2.0) + 800.0 / 6.0);
+                    targetPos.x += ((SCR_WIDTH / zoom) - (SCR_WIDTH / oldZoom)) / 2.0;
+                    targetPos.y += ((SCR_HEIGHT / zoom) - (SCR_HEIGHT / oldZoom)) / 2.0;
                 }
             }
         }
@@ -758,6 +758,9 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
     glViewport(0, 0, width, height);
+
+    targetPos.x += ((width / zoom)  - (SCR_WIDTH / zoom)) / 2.0;
+    targetPos.y += ((height / zoom) - (SCR_HEIGHT / zoom)) / 2.0;
 
     SCR_WIDTH = width;
     SCR_HEIGHT = height;
