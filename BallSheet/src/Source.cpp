@@ -38,7 +38,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 bool valueInCircle(float x1, float y1, float x2, float y2, float R);
 
 // Miscellany
-void updateRNG(std::uniform_int_distribution<>& xdist, std::uniform_int_distribution<>& ydist, int width, int height, float zoom, float tsy, float tsx);
+void updateRNG(std::uniform_real_distribution<float>& xdist, std::uniform_real_distribution<float>& ydist, int width, int height, float zoom, float tsy, float tsx);
 void restartGame(GLFWwindow* window);
 void resetStats(GLFWwindow* window);
 
@@ -110,12 +110,12 @@ FastReset fastReset{ true, false, 0.0 };
 // RNG globals
 std::random_device rd;
 std::mt19937 gen(rd());
-int lb_x = (((SCR_WIDTH / zoom - 800.0f) / 2.0f) + 800.0f * (1.0f / 6.0f)) + (targetSize.x);
-int ub_x = (((SCR_WIDTH / zoom - 800.0f) / 2.0f) + 800.0f * (5.0f / 6.0f)) - (targetSize.x);
-int lb_y = (((SCR_HEIGHT / zoom - 800.0f) / 2.0f) + 800.0f * (1.0f / 6.0f)) + (targetSize.y) + 30.0f;
-int ub_y = (((SCR_HEIGHT / zoom - 800.0f) / 2.0f) + 800.0f * (5.0f / 6.0f)) - (targetSize.y) - 30.0f;
-std::uniform_int_distribution<> distrib_x(lb_x, ub_x);
-std::uniform_int_distribution<> distrib_y(lb_y, ub_y);
+float lb_x = (((SCR_WIDTH / zoom - 800.0f) / 2.0f) + 800.0f * (1.0f / 6.0f)) + (targetSize.x);
+float ub_x = (((SCR_WIDTH / zoom - 800.0f) / 2.0f) + 800.0f * (5.0f / 6.0f)) - (targetSize.x);
+float lb_y = (((SCR_HEIGHT / zoom - 800.0f) / 2.0f) + 800.0f * (1.0f / 6.0f)) + (targetSize.y) + 30.0f;
+float ub_y = (((SCR_HEIGHT / zoom - 800.0f) / 2.0f) + 800.0f * (5.0f / 6.0f)) - (targetSize.y) - 30.0f;
+std::uniform_real_distribution<float> distrib_x(lb_x, ub_x);
+std::uniform_real_distribution<float> distrib_y(lb_y, ub_y);
 
 int main()
 {
@@ -574,8 +574,8 @@ int main()
                 if (oldZoom != zoom || oldts != targetSize.x)
                 {
                     updateRNG(distrib_x, distrib_y, SCR_WIDTH, SCR_HEIGHT, zoom, targetSize.y, targetSize.x);
-                    targetPos.x += ((SCR_WIDTH / zoom) - (SCR_WIDTH / oldZoom)) / 2.0;
-                    targetPos.y += ((SCR_HEIGHT / zoom) - (SCR_HEIGHT / oldZoom)) / 2.0;
+                    targetPos.x += ((SCR_WIDTH / zoom) - (SCR_WIDTH / oldZoom)) / 2.0f;
+                    targetPos.y += ((SCR_HEIGHT / zoom) - (SCR_HEIGHT / oldZoom)) / 2.0f;
                 }
             }
         }
@@ -759,8 +759,8 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
     glViewport(0, 0, width, height);
 
-    targetPos.x += ((width / zoom)  - (SCR_WIDTH / zoom)) / 2.0;
-    targetPos.y += ((height / zoom) - (SCR_HEIGHT / zoom)) / 2.0;
+    targetPos.x += ((width / zoom)  - (SCR_WIDTH / zoom)) / 2.0f;
+    targetPos.y += ((height / zoom) - (SCR_HEIGHT / zoom)) / 2.0f;
 
     SCR_WIDTH = width;
     SCR_HEIGHT = height;
@@ -775,16 +775,16 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
     cursorPos.y = ((float)ypos / zoom);
 }
 
-void updateRNG(std::uniform_int_distribution<>& xdist, std::uniform_int_distribution<>& ydist, int width, int height, float zoom, float tsy, float tsx)
+void updateRNG(std::uniform_real_distribution<float>& xdist, std::uniform_real_distribution<float>& ydist, int width, int height, float zoom, float tsy, float tsx)
 {
-    int lb_x = (((width / zoom - 800.0f) / 2.0f) + 800.0f * (1.0f / 6.0f)) + (tsx);
-    int ub_x = (((width / zoom - 800.0f) / 2.0f) + 800.0f * (5.0f / 6.0f)) - (tsx);
+    float lb_x = (((width / zoom - 800.0f) / 2.0f) + 800.0f * (1.0f / 6.0f)) + (tsx);
+    float ub_x = (((width / zoom - 800.0f) / 2.0f) + 800.0f * (5.0f / 6.0f)) - (tsx);
 
-    int lb_y = (((height / zoom - 800.0f) / 2.0f) + 800.0f * (1.0f / 6.0f)) + (tsy) + 30.0f;
-    int ub_y = (((height / zoom - 800.0f) / 2.0f) + 800.0f * (5.0f / 6.0f)) - (tsy) - 30.0f;
+    float lb_y = (((height / zoom - 800.0f) / 2.0f) + 800.0f * (1.0f / 6.0f)) + (tsy) + 30.0f;
+    float ub_y = (((height / zoom - 800.0f) / 2.0f) + 800.0f * (5.0f / 6.0f)) - (tsy) - 30.0f;
 
-    xdist.param(std::uniform_int_distribution<>::param_type(lb_x, ub_x));
-    ydist.param(std::uniform_int_distribution<>::param_type(lb_y, ub_y));
+    xdist.param(std::uniform_real_distribution<float>::param_type(lb_x, ub_x));
+    ydist.param(std::uniform_real_distribution<float>::param_type(lb_y, ub_y));
 }
 
 HRESULT FindChunk(HANDLE hFile, DWORD fourcc, DWORD& dwChunkSize, DWORD& dwChunkDataPosition)
