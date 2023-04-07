@@ -97,6 +97,16 @@ double score = 0.0;
 double scorePerBall = 35.0;
 double cheeseThreshold = 100.0;
 
+// Old style reset with optional flash delay for screen recordings
+struct FastReset {
+    bool flash;
+    bool requested;
+    double time;
+    void request() { requested = true; time = glfwGetTime(); };
+    void clear() { requested = false; };
+};
+FastReset fastReset{ true, false, 0.0 };
+
 // RNG globals
 std::random_device rd;
 std::mt19937 gen(rd());
@@ -549,6 +559,13 @@ int main()
                 ImGui::SameLine();
                 ImGui::Text("dphdmn/smallballs");
 
+                ImGui::NewLine();
+
+                ImGui::Text("R = fast reset, E = hold stats screen");
+                ImGui::Checkbox("Flash results on R press", &fastReset.flash);
+
+                ImGui::NewLine();
+
                 ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
                 ImGui::End();
 
@@ -561,6 +578,11 @@ int main()
                     targetPos.y = ((targetPos.y - (((SCR_HEIGHT / oldZoom - 800.0) / 2.0) + 800.0 / 6.0))) + (((SCR_HEIGHT / zoom - 800.0) / 2.0) + 800.0 / 6.0);
                 }
             }
+        }
+
+        if (fastReset.requested && (glfwGetTime() - fastReset.time > (1.0 / 60.0) || !fastReset.flash)) // flashes for 1x 60 fps frame
+        {
+            restartGame(window);
         }
 
         if (gameState == POSTGAME)
@@ -577,9 +599,7 @@ int main()
                 ImPlot::EndPlot();
                 ImGui::Text("Time:         %f", elapsedTime);
                 ImGui::Text("Avg. Balls/s: %f", averageBalls);
-                ImGui::Text("Avg. React:   %f", averageReaction);
-                ImGui::SameLine();
-                ImGui::Text("(Untrimmed)");
+                ImGui::Text("Avg. React:   %f (Untrimmed)", averageReaction);
                 ImGui::Text("Balls:        %d", ballsEaten);
                 ImGui::Text("Score:        %f", score);
                 if (maxEat > 0.0)
@@ -594,7 +614,7 @@ int main()
                 }
                 ImGui::Text("Avg. Eat:     %f", averageEat);
                 ImGui::NewLine();
-                ImGui::Text("Press R to close this window");
+                ImGui::Text("Press R or E to close this window");
             }
             ImGui::End();
         }
@@ -618,6 +638,7 @@ void restartGame(GLFWwindow* window)
     if (reactionTimes.size() == 0)
     {
         resetStats(window);
+        return;
     }
     if (gameState != INGAME)
     {
@@ -641,7 +662,7 @@ void restartGame(GLFWwindow* window)
     }
 
     // Max eat
-    for (int i = 0; eatTimes.at(i) <= eatTimes.back() - MAX_EPS_RANGE; i++) // a
+    for (int i = 0; eatTimes.at(i) <= eatTimes.back() - MAX_EPS_RANGE; i++)
     {
         double temp = 0;
         double unweightedtemp = 0;
@@ -682,6 +703,8 @@ void resetStats(GLFWwindow* window)
 {
     if (!show_settings_windows)
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
+    if (fastReset.requested)
+        fastReset.clear();
     reactionTimes.clear();
     eatTimes.clear();
     startingTime = 0.0;
@@ -705,6 +728,11 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         glfwSetWindowShouldClose(window, true);
     }
     if (key == GLFW_KEY_R && action == GLFW_PRESS)
+    {
+        fastReset.request();
+        restartGame(window);
+    }
+    if (key == GLFW_KEY_E && action == GLFW_PRESS)
     {
         restartGame(window);
     }
