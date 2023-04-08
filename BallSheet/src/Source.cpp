@@ -13,6 +13,13 @@
 #include <ImGui/implot.h>
 #include <ImGui/implot_internal.h>
 
+#define CURL_STATICLIB
+#include "curl/curl.h"
+#pragma comment (lib,"Normaliz.lib")
+#pragma comment (lib,"Ws2_32.lib")
+#pragma comment (lib,"Wldap32.lib")
+#pragma comment (lib,"Crypt32.lib")
+
 #include <shaders.h>
 #include <stb_image.h>
 
@@ -56,9 +63,19 @@ HRESULT FindChunk(HANDLE hFile, DWORD fourcc, DWORD& dwChunkSize, DWORD& dwChunk
 HRESULT ReadChunkData(HANDLE hFile, void* buffer, DWORD buffersize, DWORD bufferoffset);
 void playSource(IXAudio2SourceVoice* voice, XAUDIO2_BUFFER* buffer);
 
+// Update checking
+constexpr std::string VERSION_NAME = "v1.0.6";
+enum UpdateResponse { OUTDATED = 0, UPTODATE = 1, BADQUERY = 2 };
+UpdateResponse updateResponse = BADQUERY;
+
+// Curl callback and helper
+static size_t WriteCallback(void* contents, size_t size, size_t nmemb, void* userp);
+UpdateResponse checkLatestVersion();
+
 // Play area constexprs
 constexpr glm::vec3 outerQuadScale(800.0f, 800.0f, 1.0f);
 constexpr glm::vec3 innerQuadScale(800.0f - (800.0f / 3.0f), 800.0f - (800.0f / 3.0f), 1.0f);
+
 // Score constexprs
 constexpr double MAX_EPS_RANGE = 5.0;
 
@@ -119,12 +136,16 @@ std::uniform_real_distribution<float> distrib_y(lb_y, ub_y);
 
 int main()
 {
+    // Rate limits at 60 requests/hour, apparently per User Agent (which is just BallSheetOGL/versionNumber)
+    updateResponse = checkLatestVersion();
+
     // glfw boilerplate
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    GLFWwindow *window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "BallSheet++", NULL, NULL);
+    std::string titleName = "BallSheetOGL " + VERSION_NAME;
+    GLFWwindow *window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, titleName.c_str(), NULL, NULL);
     if (window == NULL)
     {
         std::cout << "Failed to create GLFW window" << std::endl;
@@ -436,6 +457,27 @@ int main()
                 float oldts = targetSize.x;
 
                 ImGui::Begin("Settings");
+
+                if (updateResponse == OUTDATED)
+                {
+                    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
+                    ImGui::Text("OUTDATED VERSION, GO TO github.com/helloimxtal/BallSheetOGL/releases");
+                    ImGui::Text(std::string("Current version: " + VERSION_NAME).c_str());
+                    ImGui::PopStyleColor();
+                }
+                else if (updateResponse == UPTODATE)
+                {
+                    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.0f, 1.0f, 0.0f, 1.0f));
+                    ImGui::Text(std::string("On the latest version (" + VERSION_NAME + ")").c_str());
+                    ImGui::PopStyleColor();
+                }
+                else if (updateResponse == BADQUERY)
+                {
+                    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.75f, 0.0f, 1.0f));
+                    ImGui::Text("Failed to check if on latest version, likely rate limited");
+                    ImGui::Text(std::string("Current version: " + VERSION_NAME).c_str());
+                    ImGui::PopStyleColor();
+                }
 
                 ImGui::Text("Press M to toggle this window");
                 ImGui::Text("Ctrl+click to type values");
@@ -752,6 +794,18 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     {
         axiaCursor = !axiaCursor;
     }
+    if (key == GLFW_KEY_F11 && action == GLFW_PRESS)
+    {
+        if (glfwGetWindowMonitor(window) == NULL) // windowed
+        {
+            const GLFWvidmode* mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
+            glfwSetWindowMonitor(window, glfwGetPrimaryMonitor(), 0, 0, mode->width, mode->height, mode->refreshRate);
+        }
+        else // fullscreen
+        {
+            glfwSetWindowMonitor(window, NULL, 160, 90, 1600, 900, 0);
+        }
+    }
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
@@ -863,4 +917,49 @@ void playSource(IXAudio2SourceVoice* voice, XAUDIO2_BUFFER* buffer)
     voice->SubmitSourceBuffer(buffer, nullptr);
     //Play
     voice->Start(0);
+}
+
+static size_t WriteCallback(void* contents, size_t size, size_t nmemb, void* userp)
+{
+    ((std::string*)userp)->append((char*)contents, size * nmemb);
+    return size * nmemb;
+}
+
+UpdateResponse checkLatestVersion()
+{
+    CURL* curl;
+    CURLcode res;
+    std::string readBuffer;
+
+    std::string USER_AGENT = "BallSheetOGL/" + VERSION_NAME;
+    std::cout << USER_AGENT << '\n';
+
+    curl = curl_easy_init();
+    if (curl)
+    {
+        curl_easy_setopt(curl, CURLOPT_URL, "https://api.github.com/repos/helloimxtal/BallSheetOGL/releases/latest");
+        curl_easy_setopt(curl, CURLOPT_USERAGENT, USER_AGENT.c_str());
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
+        res = curl_easy_perform(curl);
+    }
+
+    size_t beginPos = readBuffer.find("\"tag_name\":");
+    if (beginPos != std::string::npos)
+    {
+        beginPos += std::string("\"tag_name\":").length();
+        size_t endPos = readBuffer.find(',', beginPos);
+        std::string tagName = readBuffer.substr(beginPos + 1, endPos - beginPos - 2);
+        std::cout << "Current version: " << VERSION_NAME << '\n';
+        std::cout << "Latest version: " << tagName << '\n';
+        if (tagName == VERSION_NAME)
+        {
+            return UPTODATE;
+        } 
+        else
+        {
+            return OUTDATED;
+        }  
+    }
+    return BADQUERY;
 }
