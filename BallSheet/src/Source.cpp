@@ -194,28 +194,46 @@ int main()
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    GLuint VBO;
+    // Begin VAO setup
+    
     float vertices[] = 
     {
         // pos       // tex
         0.0f, 1.0f,  0.0f, 1.0f,
         1.0f, 0.0f,  1.0f, 0.0f,
-        0.0f, 0.0f,  0.0f, 0.0f,
-                     
-        0.0f, 1.0f,  0.0f, 1.0f,
+        0.0f, 0.0f,  0.0f, 0.0f,      
         1.0f, 1.0f,  1.0f, 1.0f,
-        1.0f, 0.0f,  1.0f, 0.0f
     };
+    
+    GLuint indices[] =
+    {
+        0, 1, 2,
+        0, 3, 1
+    };
+
+    GLuint VBO;
+    GLuint EBO;
     GLuint quadVAO;
+
     glGenVertexArrays(1, &quadVAO);
     glGenBuffers(1, &VBO);
+    glGenBuffers(1, &EBO);
+
+    glBindVertexArray(quadVAO);
+
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-    glBindVertexArray(quadVAO);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+    
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
+
+    // End VAO setup
 
     glActiveTexture(GL_TEXTURE0);
     stbi_set_flip_vertically_on_load(true);
@@ -416,7 +434,7 @@ int main()
         model = glm::scale(model, outerQuadScale);
         shader.setMat4("model", model);
         shader.setVec3("spriteColor", outer_quad_color * outer_quad_color.w);
-        glDrawArrays(GL_TRIANGLES, 0, 6);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
         // Inner quad
         model = glm::mat4(1.0f);
@@ -427,7 +445,7 @@ int main()
         model = glm::scale(model, innerQuadScale);
         shader.setMat4("model", model);
         shader.setVec3("spriteColor", inner_quad_color * inner_quad_color.w);
-        glDrawArrays(GL_TRIANGLES, 0, 6);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
         glBindTexture(GL_TEXTURE_2D, ballTexture);
         
@@ -445,7 +463,7 @@ int main()
         }  
         shader.setMat4("model", model);
         shader.setVec3("spriteColor", cursor_color * cursor_color.w);
-        glDrawArrays(GL_TRIANGLES, 0, 6);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
         // Target
         model = glm::mat4(1.0f);
@@ -453,7 +471,7 @@ int main()
         model = glm::scale(model, targetSize);
         shader.setMat4("model", model);
         shader.setVec3("spriteColor", target_color * target_color.w);
-        glDrawArrays(GL_TRIANGLES, 0, 6);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
         // Start the Dear ImGui frame
         ImGui_ImplOpenGL3_NewFrame();
