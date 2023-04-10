@@ -45,7 +45,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 bool valueInCircle(float x1, float y1, float x2, float y2, float R);
 
 // Miscellany
-void updateRNG(std::uniform_real_distribution<float>& xdist, std::uniform_real_distribution<float>& ydist, int width, int height, float zoom, float tsy, float tsx);
+void updateRNG();
 void restartGame(GLFWwindow* window);
 void resetStats(GLFWwindow* window);
 
@@ -82,8 +82,8 @@ constexpr double MAX_EPS_RANGE = 5.0;
 // Globals because I can't specify GLFW callback arguments (Although updateRNG and the RNG globals are only a thing because I fucked up the ortho zoom shit)
 
 // Screen globals
-unsigned int SCR_WIDTH = 1280;
-unsigned int SCR_HEIGHT = 720;
+int SCR_WIDTH = 1280;
+int SCR_HEIGHT = 720;
 
 // ImGui globals
 bool show_settings_windows = true;
@@ -92,7 +92,7 @@ bool axiaCursor = false;
 
 // Target / Cursor globals
 glm::vec3 cursorPos(0.0f, 0.0f, 0.0f);
-glm::vec3 targetPos(0.0f, 0.0f, 0.0f);
+glm::vec3 targetPos(SCR_WIDTH / (2 * zoom), SCR_HEIGHT / (2 * zoom), 0.0f);
 
 // Score globals
 double elapsedTime = 0.0;
@@ -169,14 +169,6 @@ int main()
     }
     glfwMakeContextCurrent(window);
 
-    const GLFWvidmode *mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
-    glfwSetWindowMonitor(window, glfwGetPrimaryMonitor(), 0, 0, mode->width, mode->height, mode->refreshRate);
-    SCR_WIDTH = mode->width;
-    SCR_HEIGHT = mode->height;
-    updateRNG(distrib_x, distrib_y, SCR_WIDTH, SCR_HEIGHT, zoom, targetSize.y, targetSize.x);
-    
-    targetPos = glm::vec3(SCR_WIDTH / (2 * zoom), SCR_HEIGHT / (2 * zoom), 0.0f);
-
     glfwSwapInterval(0);
 
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
@@ -193,6 +185,9 @@ int main()
     glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    const GLFWvidmode* mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
+    glfwSetWindowMonitor(window, glfwGetPrimaryMonitor(), 0, 0, mode->width, mode->height, mode->refreshRate);
 
     // Begin VAO setup
     
@@ -341,7 +336,6 @@ int main()
 
     // Set up non-global game variables
     bool show_main_settings = true;
-    bool show_debug_window = false;
     glm::vec4 clear_color(0.0f, 0.0f, 0.0f, 1.0f);
     glm::vec4 target_color(1.0f, 1.0f, 1.0f, 1.0f);
     glm::vec4 cursor_color(1.0f, 1.0f, 1.0f, 1.0f);
@@ -655,7 +649,7 @@ int main()
 
                 if (oldZoom != zoom || oldts != targetSize.x)
                 {
-                    updateRNG(distrib_x, distrib_y, SCR_WIDTH, SCR_HEIGHT, zoom, targetSize.y, targetSize.x);
+                    updateRNG();
                     targetPos.x += ((SCR_WIDTH / zoom) - (SCR_WIDTH / oldZoom)) / 2.0f;
                     targetPos.y += ((SCR_HEIGHT / zoom) - (SCR_HEIGHT / oldZoom)) / 2.0f;
                 }
@@ -893,7 +887,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
     SCR_WIDTH = width;
     SCR_HEIGHT = height;
     
-    updateRNG(distrib_x, distrib_y, width, height, zoom, targetSize.y, targetSize.x);
+    updateRNG();
 }
 
 // glfw: whenever the mouse moves, this callback is called
@@ -903,16 +897,16 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
     cursorPos.y = ((float)ypos / zoom);
 }
 
-void updateRNG(std::uniform_real_distribution<float>& xdist, std::uniform_real_distribution<float>& ydist, int width, int height, float zoom, float tsy, float tsx)
+void updateRNG()
 {
-    float lb_x = (((width / zoom - 800.0f) / 2.0f) + 800.0f * (1.0f / 6.0f)) + (tsx);
-    float ub_x = (((width / zoom - 800.0f) / 2.0f) + 800.0f * (5.0f / 6.0f)) - (tsx);
+    float lb_x = (((SCR_WIDTH / zoom - 800.0f) / 2.0f) + 800.0f * (1.0f / 6.0f)) + (targetSize.x);
+    float ub_x = (((SCR_WIDTH / zoom - 800.0f) / 2.0f) + 800.0f * (5.0f / 6.0f)) - (targetSize.x);
 
-    float lb_y = (((height / zoom - 800.0f) / 2.0f) + 800.0f * (1.0f / 6.0f)) + (tsy) + 30.0f;
-    float ub_y = (((height / zoom - 800.0f) / 2.0f) + 800.0f * (5.0f / 6.0f)) - (tsy) - 30.0f;
+    float lb_y = (((SCR_HEIGHT / zoom - 800.0f) / 2.0f) + 800.0f * (1.0f / 6.0f)) + (targetSize.y) + 30.0f;
+    float ub_y = (((SCR_HEIGHT / zoom - 800.0f) / 2.0f) + 800.0f * (5.0f / 6.0f)) - (targetSize.y) - 30.0f;
 
-    xdist.param(std::uniform_real_distribution<float>::param_type(lb_x, ub_x));
-    ydist.param(std::uniform_real_distribution<float>::param_type(lb_y, ub_y));
+    distrib_x.param(std::uniform_real_distribution<float>::param_type(lb_x, ub_x));
+    distrib_y.param(std::uniform_real_distribution<float>::param_type(lb_y, ub_y));
 }
 
 HRESULT FindChunk(HANDLE hFile, DWORD fourcc, DWORD& dwChunkSize, DWORD& dwChunkDataPosition)

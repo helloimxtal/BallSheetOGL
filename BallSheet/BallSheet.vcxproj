@@ -32,7 +32,10 @@
     <ClCompile Include="include\ImGui\implot_items.cpp" />
     <ClCompile Include="src\glad.c" />
     <ClCompile Include="src\image.cpp" />
-    <ClCompile Include="src\Source.cpp" />
+    <ClCompile Include="src\Source.cpp">
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Level3</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Level3</WarningLevel>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\shaders.h" />
