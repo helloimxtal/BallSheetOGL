@@ -337,7 +337,9 @@ int main()
     reactionTimes.reserve(1024);
     eatTimes.reserve(1024);
 
+    shader.use();
     glActiveTexture(GL_TEXTURE0);
+    glBindVertexArray(quadVAO);
 
     while (!glfwWindowShouldClose(window))
     {
@@ -398,11 +400,11 @@ int main()
         glClear(GL_COLOR_BUFFER_BIT);
 
         // Projections
-        shader.use();
+        // Shader binding was here
         glm::mat4 projection = glm::ortho(0.0f, (float)SCR_WIDTH / zoom, (float)SCR_HEIGHT / zoom, 0.0f, -1.0f, 1.0f);
         shader.setMat4("projection", projection);
 
-        glBindVertexArray(quadVAO);
+        // VAO Binding was here
         glBindTexture(GL_TEXTURE_2D, quadTexture);
 
         // Outer quad
