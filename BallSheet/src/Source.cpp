@@ -64,7 +64,7 @@ HRESULT ReadChunkData(HANDLE hFile, void* buffer, DWORD buffersize, DWORD buffer
 void playSource(IXAudio2SourceVoice* voice, XAUDIO2_BUFFER* buffer);
 
 // Update checking
-constexpr std::string VERSION_NAME = "v1.0.6";
+constexpr std::string VERSION_NAME = "v1.0.7";
 enum UpdateResponse { OUTDATED = 0, UPTODATE = 1, BADQUERY = 2 };
 UpdateResponse updateResponse = BADQUERY;
 
@@ -91,18 +91,10 @@ float zoom = 1.00f;
 bool axiaCursor = false;
 
 // Target / Cursor globals
-glm::vec3 targetSize(60.0f, 60.0f, 1.0f);
 glm::vec3 cursorPos(0.0f, 0.0f, 0.0f);
 glm::vec3 targetPos(0.0f, 0.0f, 0.0f);
 
-// Logic globals
-double startingTime = 0.0;
-double startingHp = 100.0;
-double hp = startingHp;
-std::vector<double> reactionTimes{};
-std::vector<double> eatTimes{}; // Need this for ImPlot
-enum GameStates { INGAME = 0, PREGAME = 1, POSTGAME = 2 };
-GameStates gameState = PREGAME;
+// Score globals
 double elapsedTime = 0.0;
 double averageBalls = 0.0;
 double averageReaction = 0.0;
@@ -111,8 +103,31 @@ double maxEat = 0.0;
 double trueMaxEat = 0.0;
 double averageEat = 0.0;
 double score = 0.0;
+
+// Logic settings globals
+glm::vec3 cursorSize(30.0f, 30.0f, 1.0f);
+glm::vec3 targetSize(60.0f, 60.0f, 1.0f);
 double scorePerBall = 35.0;
+double PRESSURE = 60.0;
+double startingHp = 100.0;
 double cheeseThreshold = 100.0;
+
+// Results screen globals
+float cs_results{};
+float ts_results{};
+double spb_results{};
+double p_results{};
+double shp_results{};
+double ct_results{};
+bool changedSettings = false;
+
+// Logic globals
+double startingTime = 0.0;
+double hp = startingHp;
+std::vector<double> reactionTimes{};
+std::vector<double> eatTimes{}; // Need this for ImPlot
+enum GameStates { INGAME = 0, PREGAME = 1, POSTGAME = 2 };
+GameStates gameState = PREGAME;
 
 // Old style reset with optional flash delay for screen recordings
 struct FastReset {
@@ -314,8 +329,6 @@ int main()
     glm::vec4 cursor_color(1.0f, 1.0f, 1.0f, 1.0f);
     glm::vec4 inner_quad_color(25.0f / 255.0f, 25.0f / 255.0f, 25.0f / 255.0f, 1.0f);
     glm::vec4 outer_quad_color(40.0f / 255.0f, 40.0f / 255.0f, 40.0f / 255.0f, 1.0f);
-    glm::vec3 cursorSize(30.0f, 30.0f, 1.0f);
-    double PRESSURE = 60.0;
     double deltaTime = 0.0;
     double lastFrame = 0.0;
     double lastHit = 0.0;
@@ -348,7 +361,7 @@ int main()
 
         if (gameState != POSTGAME && std::sqrt(std::pow((cursorPos.x - targetPos.x), 2) + std::pow((cursorPos.y - targetPos.y), 2)) < (cursorSize.x + targetSize.x) / 2)
         {
-            if (gameState == INGAME)
+            if (gameState == INGAME) // Eat a ball
             {
                 reactionTimes.emplace_back(currentFrame - lastHit);
                 eatTimes.emplace_back(currentFrame);
@@ -357,7 +370,7 @@ int main()
                 hp += eat;
                 lastHit = currentFrame;
             }
-            else if (gameState == PREGAME)
+            else if (gameState == PREGAME) // Start the game
             {
                 gameState = INGAME;
                 startingTime = currentFrame;
@@ -365,6 +378,7 @@ int main()
                 lastFrame = 0.0;
                 score = 0.0;
                 hp = startingHp;
+                changedSettings = false;
             }
 
             playSource(pSourceVoice, &buffer);
@@ -454,7 +468,12 @@ int main()
             if (show_main_settings)
             {
                 float oldZoom = zoom;
+                float oldcs = cursorSize.x;
                 float oldts = targetSize.x;
+                double oldspb = scorePerBall;
+                double oldp = PRESSURE;
+                double oldshp = startingHp;
+                double oldct = cheeseThreshold;
 
                 ImGui::Begin("Settings");
 
@@ -613,11 +632,19 @@ int main()
 
                 cursorSize.y = cursorSize.x;
                 targetSize.y = targetSize.x;
+
                 if (oldZoom != zoom || oldts != targetSize.x)
                 {
                     updateRNG(distrib_x, distrib_y, SCR_WIDTH, SCR_HEIGHT, zoom, targetSize.y, targetSize.x);
                     targetPos.x += ((SCR_WIDTH / zoom) - (SCR_WIDTH / oldZoom)) / 2.0f;
                     targetPos.y += ((SCR_HEIGHT / zoom) - (SCR_HEIGHT / oldZoom)) / 2.0f;
+                }
+
+                // This is gross but I justify it knowing that you aren't actually going for a "real" run when you leave the menu open
+                // Obviously I could just close the settings window during the run but I would find that annoying + nobody said they want that
+                if (gameState == INGAME && (oldcs != cursorSize.x || oldts != targetSize.x || oldspb != scorePerBall || oldp != PRESSURE || oldshp != startingHp || oldct != cheeseThreshold))
+                {
+                    changedSettings = true;
                 }
             }
         }
@@ -631,7 +658,6 @@ int main()
         {
             ImGui::SetNextWindowPos(ImVec2(((float)SCR_WIDTH - 800.0f) / 2.0f, ((float)SCR_HEIGHT - 800.0f) / 2.0f));
             ImGui::SetNextWindowSize(ImVec2(outerQuadScale.x, outerQuadScale.y));
-            ImGui::SetNextWindowFocus();
             ImPlot::SetNextAxesToFit();
             ImGui::Begin("Results");
             if (ImPlot::BeginPlot("Results"))
@@ -639,6 +665,14 @@ int main()
                 ImPlot::SetupAxes("Elapsed Time", "Reaction Time");
                 ImPlot::PlotLine("Graph", &eatTimes.at(0), &reactionTimes.at(0), reactionTimes.size());
                 ImPlot::EndPlot();
+
+                if (changedSettings)
+                {
+                    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
+                    ImGui::Text("Settings were changed mid run");
+                    ImGui::NewLine();
+                    ImGui::PopStyleColor();
+                }
                 ImGui::Text("Time:         %f", elapsedTime);
                 ImGui::Text("Avg. Balls/s: %f", averageBalls);
                 ImGui::Text("Avg. React:   %f (Untrimmed)", averageReaction);
@@ -655,7 +689,18 @@ int main()
                     ImGui::Text("Max Eat:      Last ball hit was <5s, Max Eat measures fastest 5s segment", maxEat);
                 }
                 ImGui::Text("Avg. Eat:     %f", averageEat);
+
                 ImGui::NewLine();
+
+                ImGui::Text("Cursor Size:      %f", cs_results);
+                ImGui::Text("Target Size:      %f", ts_results);
+                ImGui::Text("Score Per Ball:   %f", spb_results);
+                ImGui::Text("Pressure:         %f", p_results);
+                ImGui::Text("Starting Hp:      %f", shp_results);
+                ImGui::Text("Cheese Threshold: %f", ct_results);
+
+                ImGui::NewLine();
+
                 ImGui::Text("Press R or E to close this window");
             }
             ImGui::End();
@@ -691,6 +736,14 @@ void restartGame(GLFWwindow* window)
         return;
     }
 
+    // Present the settings finished with
+    cs_results = cursorSize.x;
+    ts_results = targetSize.x;
+    spb_results = scorePerBall;
+    p_results = PRESSURE;
+    shp_results = startingHp;
+    ct_results = cheeseThreshold;
+
     elapsedTime = glfwGetTime() - startingTime;
     ballsEaten = reactionTimes.size();
     averageEat = score / elapsedTime;
@@ -724,20 +777,29 @@ void restartGame(GLFWwindow* window)
     averageReaction = sum / ballsEaten;
     averageBalls = 1000 / averageReaction;
     
-
-    std::cout << "\n======================================\n";
-    std::cout << "\nTime:\t\t" << elapsedTime << '\n';
-    std::cout << "Avg. Balls/s:\t" << averageBalls << '\n';
-    std::cout << "Avg. React:\t" << averageReaction << '\n';
-    std::cout << "Balls:\t\t" << ballsEaten << '\n';
-    std::cout << "Score:\t\t" << score << '\n';
+    
+    std::cout << "\n======================================\n\n";
+    if (changedSettings) { std::cout << "Settings were changed mid run\n\n"; }
+    std::cout << "Time:         " << elapsedTime << '\n';
+    std::cout << "Avg. Balls/s: " << averageBalls << '\n';
+    std::cout << "Avg. React:   " << averageReaction << '\n';
+    std::cout << "Balls:        " << ballsEaten << '\n';
+    std::cout << "Score:        " << score << '\n';
     if (maxEat > 0.0)
-        std::cout << "Max Eat:\t" << maxEat << " (Fastest 5s segment : " << 1000.0 / (maxEat / scorePerBall) << " ms cheese corrected avg., " << trueMaxEat << " ms true avg.)\n";
+        std::cout << "Max Eat:      " << maxEat << " (Fastest 5s segment : " << 1000.0 / (maxEat / scorePerBall) << " ms cheese corrected avg., " << trueMaxEat << " ms true avg.)\n";
     else
-        std::cout << "Max Eat:\t" << "Last ball hit was <5s, Max Eat measures fastest 5s segment" << '\n';
-    std::cout << "Avg. Eat:\t" << averageEat << '\n';
+        std::cout << "Max Eat:      " << "Last ball hit was <5s, Max Eat measures fastest 5s segment" << '\n';
+    std::cout << "Avg. Eat:     " << averageEat << '\n';
+
+    std::cout << "\nCursor Size:      " << cs_results << '\n';
+    std::cout << "Target Size:      " << ts_results << '\n';
+    std::cout << "Score Per Ball:   " << spb_results << '\n';
+    std::cout << "Pressure:         " << p_results << '\n';
+    std::cout << "Starting Hp:      " << shp_results << '\n';
+    std::cout << "Cheese Threshold: " << ct_results << '\n';
 
     gameState = POSTGAME;
+
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL); 
 }
 
