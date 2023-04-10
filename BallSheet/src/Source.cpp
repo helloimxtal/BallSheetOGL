@@ -722,17 +722,9 @@ int main()
 
 void restartGame(GLFWwindow* window)
 {
-    if (reactionTimes.size() == 0)
+    if (reactionTimes.size() == 0 || gameState == POSTGAME)
     {
         resetStats(window);
-        return;
-    }
-    if (gameState != INGAME)
-    {
-        if (gameState == POSTGAME)
-        {
-            resetStats(window);
-        }
         return;
     }
 
