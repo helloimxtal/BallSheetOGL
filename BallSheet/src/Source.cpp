@@ -501,8 +501,13 @@ int main()
                 if (updateResponse == OUTDATED)
                 {
                     ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
-                    ImGui::Text("OUTDATED VERSION, GO TO github.com/helloimxtal/BallSheetOGL/releases");
-                    ImGui::Text(std::string("Current version: " + VERSION_NAME).c_str());
+                    ImGui::Text(std::string("Outdated version (" + VERSION_NAME + ")").c_str());
+                    if (ImGui::Button("Update"))
+                    {
+                        ShellExecute(NULL, _T("open"), _T("https://github.com/helloimxtal/BallSheetOGL/releases"), NULL, NULL, SW_SHOWNORMAL); 
+                    }
+                    ImGui::SameLine();
+                    ImGui::Text("https://github.com/helloimxtal/BallSheetOGL/releases");
                     ImGui::PopStyleColor();
                 }
                 else if (updateResponse == UPTODATE)
