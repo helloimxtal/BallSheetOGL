@@ -89,6 +89,7 @@ int SCR_HEIGHT = 720;
 bool show_settings_windows = true;
 float zoom = 1.00f;
 bool axiaCursor = false;
+bool hwCursor = false;
 
 // Target / Cursor globals
 glm::vec3 cursorPos(0.0f, 0.0f, 0.0f);
@@ -255,6 +256,14 @@ int main()
     data = stbi_load("./res/square.png", &width, &height, &nrChannels, 0);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
     stbi_image_free(data);
+
+    // Cursor image
+    unsigned char* cursorData = stbi_load("./res/cursor.png", &width, &height, &nrChannels, 0);
+    GLFWimage cursorImage;
+    cursorImage.width = 30;
+    cursorImage.height = 30;
+    cursorImage.pixels = cursorData;
+    GLFWcursor* HWOcursor = glfwCreateCursor(&cursorImage, 15, 15);
 
     // audio, all copied msft sample code
     HRESULT hr;
@@ -443,20 +452,23 @@ int main()
         glBindTexture(GL_TEXTURE_2D, ballTexture);
         
         // Cursor
-        model = glm::mat4(1.0f);
-        if (!axiaCursor)
+        if (!hwCursor)
         {
-            model = glm::translate(model, glm::vec3(cursorPos.x - (cursorSize.x / 2), cursorPos.y - (cursorSize.y / 2), 0.0f));
-            model = glm::scale(model, cursorSize);
+            model = glm::mat4(1.0f);
+            if (!axiaCursor)
+            {
+                model = glm::translate(model, glm::vec3(cursorPos.x - (cursorSize.x / 2), cursorPos.y - (cursorSize.y / 2), 0.0f));
+                model = glm::scale(model, cursorSize);
+            }
+            else
+            {
+                model = glm::translate(model, glm::vec3(cursorPos.x - (30.0f / (2 * zoom)), cursorPos.y - (30.0f / (2 * zoom)), 0.0f));
+                model = glm::scale(model, glm::vec3(30.0f / zoom, 30.0f / zoom, 1.0f));
+            }
+            shader.setMat4("model", model);
+            shader.setVec3("spriteColor", cursor_color * cursor_color.w);
+            glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
         }
-        else
-        {
-            model = glm::translate(model, glm::vec3(cursorPos.x - (30.0f / (2 * zoom)), cursorPos.y - (30.0f / (2 * zoom)), 0.0f));
-            model = glm::scale(model, glm::vec3(30.0f / zoom, 30.0f / zoom, 1.0f));
-        }  
-        shader.setMat4("model", model);
-        shader.setVec3("spriteColor", cursor_color * cursor_color.w);
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
         // Target
         model = glm::mat4(1.0f);
@@ -546,7 +558,20 @@ int main()
                     clear_color = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
                 }
 
-                ImGui::Checkbox("\"O\" cursor", &axiaCursor);
+                ImGui::Checkbox("Non-scaling cursor", &axiaCursor);
+                if (ImGui::Checkbox("Hardware overlay cursor", &hwCursor)) // Activates on click, not on hwCursor == true
+                {
+                    if (hwCursor)
+                    {
+                        glfwSetCursor(window, HWOcursor);
+                    }
+                    else
+                    {
+                        glfwSetCursor(window, NULL);
+                    }
+                }
+                ImGui::Text("Use HWO cursor iff the default cursor visibly lags");
+                ImGui::Text("With enough FPS + Fullscreen, HWO cursor can be slower");
 
                 ImGui::NewLine();
 
@@ -806,7 +831,7 @@ void restartGame(GLFWwindow* window)
 
 void resetStats(GLFWwindow* window)
 {
-    if (!show_settings_windows)
+    if (!show_settings_windows && !hwCursor)
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
     if (fastReset.requested)
         fastReset.clear();
@@ -848,7 +873,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         {
             glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
         }
-        else if (gameState != POSTGAME)
+        else if (gameState != POSTGAME && !hwCursor)
         {
             glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN); 
         }
