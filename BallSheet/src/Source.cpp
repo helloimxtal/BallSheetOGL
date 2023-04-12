@@ -335,7 +335,6 @@ int main()
     Shader shader("./res/shader.vert", "./res/shader.frag");  
 
     // Set up non-global game variables
-    bool show_main_settings = true;
     glm::vec4 clear_color(0.0f, 0.0f, 0.0f, 1.0f);
     glm::vec4 target_color(1.0f, 1.0f, 1.0f, 1.0f);
     glm::vec4 cursor_color(1.0f, 1.0f, 1.0f, 1.0f);
@@ -467,19 +466,15 @@ int main()
         shader.setVec3("spriteColor", target_color * target_color.w);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
-        // Start the Dear ImGui frame
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
-
-        if (show_settings_windows)
+        if (show_settings_windows || gameState == POSTGAME)
         {
-            // Doubles as a debug window
-            //if (show_debug_window)
-            //    ImGui::ShowDemoWindow(&show_debug_window);
+            // Start the Dear ImGui frame
+            ImGui_ImplOpenGL3_NewFrame();
+            ImGui_ImplGlfw_NewFrame();
+            ImGui::NewFrame();
 
             // The actual settings + miscellany
-            if (show_main_settings)
+            if (show_settings_windows)
             {
                 float oldZoom = zoom;
                 float oldcs = cursorSize.x;
@@ -661,68 +656,68 @@ int main()
                     changedSettings = true;
                 }
             }
-        }
 
-        if (fastReset.requested && (glfwGetTime() - fastReset.time > (1.0 / 60.0) || !fastReset.flash)) // flashes for 1x 60 fps frame
-        {
-            restartGame(window);
-        }
-
-        if (gameState == POSTGAME)
-        {
-            ImGui::SetNextWindowPos(ImVec2(((float)SCR_WIDTH - 800.0f) / 2.0f, ((float)SCR_HEIGHT - 800.0f) / 2.0f));
-            ImGui::SetNextWindowSize(ImVec2(outerQuadScale.x, outerQuadScale.y));
-            ImPlot::SetNextAxesToFit();
-            ImGui::Begin("Results");
-            if (ImPlot::BeginPlot("Results"))
+            if (fastReset.requested && (glfwGetTime() - fastReset.time > (1.0 / 60.0) || !fastReset.flash)) // flashes for 1x 60 fps frame
             {
-                ImPlot::SetupAxes("Elapsed Time", "Reaction Time");
-                ImPlot::PlotLine("Graph", &eatTimes.at(0), &reactionTimes.at(0), reactionTimes.size());
-                ImPlot::EndPlot();
-
-                if (changedSettings)
-                {
-                    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
-                    ImGui::Text("Settings were changed mid run");
-                    ImGui::NewLine();
-                    ImGui::PopStyleColor();
-                }
-                ImGui::Text("Time:         %f", elapsedTime);
-                ImGui::Text("Avg. Balls/s: %f", averageBalls);
-                ImGui::Text("Avg. React:   %f (Untrimmed)", averageReaction);
-                ImGui::Text("Balls:        %d", ballsEaten);
-                ImGui::Text("Score:        %f", score);
-                if (maxEat > 0.0)
-                {
-                    ImGui::Text("Max Eat:      %f", maxEat);
-                    ImGui::SameLine();
-                    ImGui::Text("(Fastest 5s segment: %f ms cheese corrected avg., %f ms true avg.)", 1000.0 / (maxEat / scorePerBall), trueMaxEat);
-                }
-                else
-                {
-                    ImGui::Text("Max Eat:      Last ball hit was <5s, Max Eat measures fastest 5s segment", maxEat);
-                }
-                ImGui::Text("Avg. Eat:     %f", averageEat);
-
-                ImGui::NewLine();
-
-                ImGui::Text("Cursor Size:      %f", cs_results);
-                ImGui::Text("Target Size:      %f", ts_results);
-                ImGui::Text("Score Per Ball:   %f", spb_results);
-                ImGui::Text("Pressure:         %f", p_results);
-                ImGui::Text("Starting Hp:      %f", shp_results);
-                ImGui::Text("Cheese Threshold: %f", ct_results);
-
-                ImGui::NewLine();
-
-                ImGui::Text("Press R or E to close this window");
+                restartGame(window);
             }
-            ImGui::End();
-        }
 
-        ImGui::Render();
-        
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+            if (gameState == POSTGAME)
+            {
+                ImGui::SetNextWindowPos(ImVec2(((float)SCR_WIDTH - 800.0f) / 2.0f, ((float)SCR_HEIGHT - 800.0f) / 2.0f));
+                ImGui::SetNextWindowSize(ImVec2(outerQuadScale.x, outerQuadScale.y));
+                ImPlot::SetNextAxesToFit();
+                ImGui::Begin("Results");
+                if (ImPlot::BeginPlot("Results"))
+                {
+                    ImPlot::SetupAxes("Elapsed Time", "Reaction Time");
+                    ImPlot::PlotLine("Graph", &eatTimes.at(0), &reactionTimes.at(0), reactionTimes.size());
+                    ImPlot::EndPlot();
+
+                    if (changedSettings)
+                    {
+                        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
+                        ImGui::Text("Settings were changed mid run");
+                        ImGui::NewLine();
+                        ImGui::PopStyleColor();
+                    }
+                    ImGui::Text("Time:         %f", elapsedTime);
+                    ImGui::Text("Avg. Balls/s: %f", averageBalls);
+                    ImGui::Text("Avg. React:   %f (Untrimmed)", averageReaction);
+                    ImGui::Text("Balls:        %d", ballsEaten);
+                    ImGui::Text("Score:        %f", score);
+                    if (maxEat > 0.0)
+                    {
+                        ImGui::Text("Max Eat:      %f", maxEat);
+                        ImGui::SameLine();
+                        ImGui::Text("(Fastest 5s segment: %f ms cheese corrected avg., %f ms true avg.)", 1000.0 / (maxEat / scorePerBall), trueMaxEat);
+                    }
+                    else
+                    {
+                        ImGui::Text("Max Eat:      Last ball hit was <5s, Max Eat measures fastest 5s segment", maxEat);
+                    }
+                    ImGui::Text("Avg. Eat:     %f", averageEat);
+
+                    ImGui::NewLine();
+
+                    ImGui::Text("Cursor Size:      %f", cs_results);
+                    ImGui::Text("Target Size:      %f", ts_results);
+                    ImGui::Text("Score Per Ball:   %f", spb_results);
+                    ImGui::Text("Pressure:         %f", p_results);
+                    ImGui::Text("Starting Hp:      %f", shp_results);
+                    ImGui::Text("Cheese Threshold: %f", ct_results);
+
+                    ImGui::NewLine();
+
+                    ImGui::Text("Press R or E to close this window");
+                }
+                ImGui::End();
+            }
+
+            ImGui::Render();
+
+            ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        }
 
         // Present and poll
         glfwSwapBuffers(window);
