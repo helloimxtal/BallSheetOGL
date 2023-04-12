@@ -143,9 +143,9 @@ FastReset fastReset{ true, false, 0.0 };
 std::random_device rd;
 std::mt19937 gen(rd());
 float lb_x = (((SCR_WIDTH / zoom - 800.0f) / 2.0f) + 800.0f * (1.0f / 6.0f)) + (targetSize.x);
-float ub_x = (((SCR_WIDTH / zoom - 800.0f) / 2.0f) + 800.0f * (5.0f / 6.0f)) - (targetSize.x);
+float ub_x = lb_x + 800.0f * (4.0f / 6.0f) - (2 * targetSize.x);
 float lb_y = (((SCR_HEIGHT / zoom - 800.0f) / 2.0f) + 800.0f * (1.0f / 6.0f)) + (targetSize.y) + 30.0f;
-float ub_y = (((SCR_HEIGHT / zoom - 800.0f) / 2.0f) + 800.0f * (5.0f / 6.0f)) - (targetSize.y) - 30.0f;
+float ub_y = lb_y + 800.0f * (4.0f / 6.0f) - (2 * targetSize.y) - 60.0f;
 std::uniform_real_distribution<float> distrib_x(lb_x, ub_x);
 std::uniform_real_distribution<float> distrib_y(lb_y, ub_y);
 
@@ -894,14 +894,14 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 
 void updateRNG()
 {
-    float lb_x = (((SCR_WIDTH / zoom - 800.0f) / 2.0f) + 800.0f * (1.0f / 6.0f)) + (targetSize.x);
-    float ub_x = (((SCR_WIDTH / zoom - 800.0f) / 2.0f) + 800.0f * (5.0f / 6.0f)) - (targetSize.x);
+    float lbx = (((SCR_WIDTH / zoom - 800.0f) / 2.0f) + 800.0f * (1.0f / 6.0f)) + (targetSize.x);
+    float ubx = lbx + 800.0f * (4.0f / 6.0f) - (2 * targetSize.x);
 
-    float lb_y = (((SCR_HEIGHT / zoom - 800.0f) / 2.0f) + 800.0f * (1.0f / 6.0f)) + (targetSize.y) + 30.0f;
-    float ub_y = (((SCR_HEIGHT / zoom - 800.0f) / 2.0f) + 800.0f * (5.0f / 6.0f)) - (targetSize.y) - 30.0f;
+    float lby = (((SCR_HEIGHT / zoom - 800.0f) / 2.0f) + 800.0f * (1.0f / 6.0f)) + (targetSize.y) + 30.0f;
+    float uby = lby + 800.0f * (4.0f / 6.0f) - (2 * targetSize.y) - 60.0f;
 
-    distrib_x.param(std::uniform_real_distribution<float>::param_type(lb_x, ub_x));
-    distrib_y.param(std::uniform_real_distribution<float>::param_type(lb_y, ub_y));
+    distrib_x.param(std::uniform_real_distribution<float>::param_type(lbx, ubx));
+    distrib_y.param(std::uniform_real_distribution<float>::param_type(lby, uby));
 }
 
 HRESULT FindChunk(HANDLE hFile, DWORD fourcc, DWORD& dwChunkSize, DWORD& dwChunkDataPosition)
