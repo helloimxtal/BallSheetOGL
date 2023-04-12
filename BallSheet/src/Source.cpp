@@ -64,7 +64,7 @@ HRESULT ReadChunkData(HANDLE hFile, void* buffer, DWORD buffersize, DWORD buffer
 void playSource(IXAudio2SourceVoice* voice, XAUDIO2_BUFFER* buffer);
 
 // Update checking
-constexpr std::string VERSION_NAME = "v1.0.7";
+const std::string VERSION_NAME = "v1.0.8";
 enum UpdateResponse { OUTDATED = 0, UPTODATE = 1, BADQUERY = 2 };
 UpdateResponse updateResponse = BADQUERY;
 
