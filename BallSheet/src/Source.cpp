@@ -48,6 +48,7 @@ bool valueInCircle(float x1, float y1, float x2, float y2, float R);
 void updateRNG();
 void restartGame(GLFWwindow* window);
 void resetStats(GLFWwindow* window);
+GLFWcursor* generateCursorImage(glm::vec4 color);
 
 // ImGui
 namespace ImGui 
@@ -257,13 +258,7 @@ int main()
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
     stbi_image_free(data);
 
-    // Cursor image
-    unsigned char* cursorData = stbi_load("./res/cursor.png", &width, &height, &nrChannels, 0);
-    GLFWimage cursorImage;
-    cursorImage.width = 30;
-    cursorImage.height = 30;
-    cursorImage.pixels = cursorData;
-    GLFWcursor* HWOcursor = glfwCreateCursor(&cursorImage, 15, 15);
+    GLFWcursor* hwoCursor = generateCursorImage(glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
 
     // audio, all copied msft sample code
     HRESULT hr;
@@ -564,11 +559,11 @@ int main()
                 }
 
                 ImGui::Checkbox("Non-scaling cursor", &axiaCursor);
-                if (ImGui::Checkbox("Hardware overlay cursor", &hwCursor)) // Activates on click, not on hwCursor == true
+                if (ImGui::Checkbox("Hardware overlay cursor (Toggle to update color)", &hwCursor)) // Activates on click, not on hwCursor == true
                 {
                     if (hwCursor)
                     {
-                        glfwSetCursor(window, HWOcursor);
+                        glfwSetCursor(window, generateCursorImage(cursor_color));
                     }
                     else
                     {
@@ -1055,4 +1050,29 @@ UpdateResponse checkLatestVersion()
         }  
     }
     return BADQUERY;
+}
+
+GLFWcursor* generateCursorImage(glm::vec4 color)
+{
+    int width;
+    int height;
+    int nrChannels;
+    unsigned char* cursorData = stbi_load("./res/cursor.png", &width, &height, &nrChannels, 0);
+    for (int i = 0; i < 4 * width * height; i += 4)
+    {
+        unsigned char alpha = cursorData[i + 3];
+
+        if (alpha != 0)
+        {
+            cursorData[i] &= (int)(color.r * 255);
+            cursorData[i + 1] &= (int)(color.g * 255);
+            cursorData[i + 2] &= (int)(color.b * 255);
+        }
+    }
+    GLFWimage cursorImage;
+    cursorImage.width = width;
+    cursorImage.height = height;
+    cursorImage.pixels = cursorData;
+    GLFWcursor* HWOcursor = glfwCreateCursor(&cursorImage, width / 2, height / 2);
+    return HWOcursor;
 }
