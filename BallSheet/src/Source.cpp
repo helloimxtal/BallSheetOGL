@@ -96,7 +96,8 @@ int SCR_HEIGHT = 720;
 bool show_settings_windows = true;
 float zoom = 1.00f;
 bool axiaCursor = false;
-bool hwCursor = false;
+bool ballCursor = false;
+bool windowsCursor = false;
 bool presetsWindow = false;
 
 // Target / Cursor globals
@@ -458,7 +459,7 @@ int main()
         glBindTexture(GL_TEXTURE_2D, ballTexture);
         
         // Cursor
-        if (!hwCursor)
+        if (!ballCursor && !windowsCursor)
         {
             model = glm::mat4(1.0f);
             if (!axiaCursor)
@@ -629,22 +630,32 @@ int main()
                 }
 
                 ImGui::Checkbox("Non-scaling cursor", &axiaCursor);
-                if (ImGui::Checkbox("Hardware overlay cursor (Toggle to update color)", &hwCursor)) // Activates on click, not on hwCursor == true
+
+                ImGui::NewLine();
+
+                ImGui::Text("Hardware cursors:");
+                if (ImGui::Checkbox("Ball (Toggle to update color)", &ballCursor)) // Activates on click, not on ballCursor == true
                 {
-                    if (hwCursor)
+                    if (ballCursor)
                     {
                         glfwSetCursor(window, generateCursorImage(cursor_color));
+                        windowsCursor = false;
                     }
                     else
                     {
                         glfwSetCursor(window, NULL);
                     }
                 }
-                ImGui::Text("Use HW overlay cursor only if the ingame cursor is slower than the windows one");
+                if (ImGui::Checkbox("Windows Default", &windowsCursor))
+                {
+                    glfwSetCursor(window, NULL);
+                    ballCursor = false;
+                }
+                ImGui::Text("Use hardware cursors only if the ingame cursor is slower than the windows one");
 
                 ImGui::NewLine();
 
-                ImGui::SliderFloat("cursor size", &cursorSize.x, 5.0f, 100.0f);
+                ImGui::SliderFloat("cursor size", &cursorSize.x, 0.0f, 100.0f);
                 ImGui::SliderFloat("target size", &targetSize.x, 5.0f, 100.0f);
                 ImGui::SliderDouble("score per ball", &scorePerBall, 0.0, 1000.0);
                 ImGui::SliderDouble("pressure", &PRESSURE, 0.0, 1000.0);
@@ -900,7 +911,7 @@ void restartGame(GLFWwindow* window)
 
 void resetStats(GLFWwindow* window)
 {
-    if (!show_settings_windows && !hwCursor)
+    if (!show_settings_windows && !ballCursor && !windowsCursor)
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
     if (fastReset.requested)
         fastReset.clear();
@@ -942,7 +953,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         {
             glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
         }
-        else if (gameState != POSTGAME && !hwCursor)
+        else if (gameState != POSTGAME && !ballCursor && !windowsCursor)
         {
             glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN); 
         }
