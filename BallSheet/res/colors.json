@@ -1,0 +1,16 @@
+[
+    {
+        "clear_color": 3368601855,
+        "cursor_color": 255,
+        "inner_quad_color": 4294967295,
+        "outer_quad_color": 3789677055,
+        "target_color": 255
+    },
+    {
+        "clear_color": 4294967295,
+        "cursor_color": 255,
+        "inner_quad_color": 3368601855,
+        "outer_quad_color": 3789677055,
+        "target_color": 255
+    }
+]

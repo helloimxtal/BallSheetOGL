@@ -20,6 +20,9 @@
 #pragma comment (lib,"Wldap32.lib")
 #pragma comment (lib,"Crypt32.lib")
 
+#include <nlohmann/json_fwd.hpp>
+#include <nlohmann/json.hpp>
+
 #include <shaders.h>
 #include <stb_image.h>
 
@@ -28,6 +31,7 @@
 #include <vector>
 #include <algorithm>
 #include <cmath>
+#include <fstream>
 
 #define fourccRIFF 'FFIR'
 #define fourccDATA 'atad'
@@ -49,6 +53,8 @@ void updateRNG();
 void restartGame(GLFWwindow* window);
 void resetStats(GLFWwindow* window);
 GLFWcursor* generateCursorImage(glm::vec4 color);
+glm::vec4 uintToVec4RGBA(unsigned int color);
+unsigned int Vec4RGBAtoUint(glm::vec4 color);
 
 // ImGui
 namespace ImGui 
@@ -65,7 +71,7 @@ HRESULT ReadChunkData(HANDLE hFile, void* buffer, DWORD buffersize, DWORD buffer
 void playSource(IXAudio2SourceVoice* voice, XAUDIO2_BUFFER* buffer);
 
 // Update checking
-const std::string VERSION_NAME = "v1.0.9";
+const std::string VERSION_NAME = "v1.0.10";
 enum UpdateResponse { OUTDATED = 0, UPTODATE = 1, BADQUERY = 2 };
 UpdateResponse updateResponse = BADQUERY;
 
@@ -91,6 +97,7 @@ bool show_settings_windows = true;
 float zoom = 1.00f;
 bool axiaCursor = false;
 bool hwCursor = false;
+bool presetsWindow = false;
 
 // Target / Cursor globals
 glm::vec3 cursorPos(0.0f, 0.0f, 0.0f);
@@ -336,7 +343,11 @@ int main()
     ImGui_ImplOpenGL3_Init(glsl_version);
 
     // Link and compile shader programs
-    Shader shader("./res/shader.vert", "./res/shader.frag");  
+    Shader shader("./res/shader.vert", "./res/shader.frag");
+
+    // Read color settings into object from ./res/colors.json
+    std::ifstream color_file("./res/colors.json");
+    nlohmann::json color_presets = nlohmann::json::parse(color_file);
 
     // Set up non-global game variables
     glm::vec4 clear_color(0.0f, 0.0f, 0.0f, 1.0f);
@@ -540,6 +551,65 @@ int main()
                     clear_color = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
                 }
 
+                ImGui::SameLine();
+                ImGui::Checkbox("Saved color presets", &presetsWindow);
+
+                if (presetsWindow)
+                {
+                    ImGui::Begin("Saved color presets");
+                    ImGui::Text("You\'ll need to copy over colors.json between updates");
+
+                    if (ImGui::Button("Save current colors"))
+                    {
+                        nlohmann::json current_colors_json = {
+                            {"target_color", Vec4RGBAtoUint(target_color)},
+                            {"cursor_color", Vec4RGBAtoUint(cursor_color)},
+                            {"inner_quad_color", Vec4RGBAtoUint(inner_quad_color)},
+                            {"outer_quad_color", Vec4RGBAtoUint(outer_quad_color)},
+                            {"clear_color", Vec4RGBAtoUint(clear_color)}
+                        };
+
+                        color_presets.push_back(current_colors_json);
+
+                        std::string color_presets_string = color_presets.dump(4);
+                        std::ofstream out("./res/colors.json");
+                        out << color_presets_string;
+                    }
+
+                    ImGui::NewLine();
+
+                    for (nlohmann::json::size_type i = 0; i < color_presets.size(); i++)
+                    {
+                        if (ImGui::Button(std::string("Load preset " + std::to_string(i)).c_str()))
+                        {
+                            target_color = uintToVec4RGBA(color_presets[i]["target_color"]);
+                            cursor_color = uintToVec4RGBA(color_presets[i]["cursor_color"]);
+                            inner_quad_color = uintToVec4RGBA(color_presets[i]["inner_quad_color"]);
+                            outer_quad_color = uintToVec4RGBA(color_presets[i]["outer_quad_color"]);
+                            clear_color = uintToVec4RGBA(color_presets[i]["clear_color"]);
+                        }
+
+                        ImGui::SameLine();
+
+                        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
+                        ImGui::PushID(i);
+
+                        if (ImGui::Button("X"))
+                        {
+                            color_presets.erase(color_presets.begin() + i--);
+
+                            std::string color_presets_string = color_presets.dump(4);
+                            std::ofstream out("./res/colors.json");
+                            out << color_presets_string;
+                        }
+
+                        ImGui::PopID();
+                        ImGui::PopStyleColor();
+                    }
+
+                    ImGui::End();
+                }
+
                 if (ImGui::Button("Spiffy colors"))
                 {
                     target_color = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
@@ -570,8 +640,7 @@ int main()
                         glfwSetCursor(window, NULL);
                     }
                 }
-                ImGui::Text("Use HWO cursor iff the default cursor visibly lags");
-                ImGui::Text("With enough FPS + Fullscreen, HWO cursor can be slower");
+                ImGui::Text("Use HW overlay cursor only if the ingame cursor is slower than the windows one");
 
                 ImGui::NewLine();
 
@@ -1075,4 +1144,26 @@ GLFWcursor* generateCursorImage(glm::vec4 color)
     cursorImage.pixels = cursorData;
     GLFWcursor* HWOcursor = glfwCreateCursor(&cursorImage, width / 2, height / 2);
     return HWOcursor;
+}
+
+glm::vec4 uintToVec4RGBA(unsigned int color)
+{
+    float red   = ((color & 0xff000000) >> 24) / 255.0f;
+    float green = ((color & 0x00ff0000) >> 16) / 255.0f;
+    float blue  = ((color & 0x0000ff00) >> 8) / 255.0f;
+    float alpha = (color & 0x000000ff) / 255.0f;
+
+    return glm::vec4(red, green, blue, alpha);
+}
+
+unsigned int Vec4RGBAtoUint(glm::vec4 color)
+{
+    unsigned int temp{};
+
+    temp += (unsigned int)(color.r * 255) << 24;
+    temp += (unsigned int)(color.g * 255) << 16;
+    temp += (unsigned int)(color.b * 255) << 8;
+    temp += (unsigned int)(color.a * 255);
+
+    return temp;
 }
